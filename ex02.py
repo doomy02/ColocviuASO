@@ -1,28 +1,18 @@
 #!/usr/bin/env python3
 import subprocess
+import re
 
-def ping_host(ip):
-    try:
-        result = subprocess.run(["ping", "-c", "1", "-W", "1", ip], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return result.returncode == 0
-    except:
-        return False
-
-def scan_network(network_prefix, start=1, end=254):
-    active_ips = []
-    for host in range(start, end + 1):
-        ip = f"{network_prefix}.{host}"
-        if ping_host(ip):
-            active_ips.append(ip)
-    return active_ips
+def discover_hosts(network_cidr="10.11.14.0/24"):
+    cmd = ["nmap", "-sn", network_cidr]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    ips = []
+    for line in result.stdout.splitlines():
+        match = re.search(r"for [^(]+\(([^)]+)\)", line)
+        if match:
+            ips.append(match.group(1))
+    return ips
 
 if __name__ == "__main__":
-    network_prefix = "10.11.14"
-    start_ip = 1
-    end_ip = 254
-    active_ips = scan_network(network_prefix, start_ip, end_ip)
-    if active_ips:
-        for ip in active_ips:
-            print(ip)
-    else:
-        print("No active hosts found.")
+    active_ips = discover_hosts("10.11.14.0/24")
+    for ip in active_ips:
+        print(ip)
